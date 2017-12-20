@@ -9,11 +9,13 @@ Type
         id: integer;
         name: string;
         next: PStudent;
+        year: integer; // <--------------- added
         end;
         
      FStudent = record       //Тип: Структура TStudent
         id: integer;
         name: string[10];
+        year: integer; // <--------------- added
         end;
         
      TBase = file of FStudent; //Тип: Файл структур TStudent
@@ -29,12 +31,13 @@ begin
 end;
 {$endif}
 
-function createItem (_id: integer; _name: string ): PStudent;
+function createItem (_id: integer; _name: string; _year:integer): PStudent; // <--------------- CHANGED
 var temp_pointer:PStudent;
 begin
     new(temp_pointer);
     temp_pointer^.id := _id;
     temp_pointer^.name := _name;
+    temp_pointer^.year := _year;// <--------------- added
     temp_pointer^.next := nil;
     createItem := temp_pointer;
 end;
@@ -209,6 +212,56 @@ begin
       
 end;
 
+procedure linkItemByYearSorting(var _root:PStudent; var candidate: PStudent);
+var current, previous, temproary:Pstudent;
+begin
+    //previous := nil;
+    if _root=nil then 
+    begin
+        _root:=candidate;
+        exit;
+    end;
+    
+   
+        //if (selectUpper(_root,candidate)=candidate) then
+        if (candidate^.year < _root^.year) then // <--------------- CHANGED
+        begin
+            temproary := _root;
+            _root := candidate;
+            _root^.next := temproary;
+            exit;
+         end
+         else
+         begin
+            if _root^.next=nil then
+            begin
+                 _root^.next := candidate;
+                 exit;
+            end;
+         end;         
+
+        
+    previous := _root;
+    current := _root^.next;
+    
+    repeat
+    begin
+        //if selectUpper(current,candidate)=candidate then
+        if (candidate^.year < current^.year) then // <--------------- CHANGED
+        begin 
+            previous^.next := candidate;
+            candidate^.next := current;
+            exit;
+        end;
+        previous := current;
+        current := current^.next;
+    end
+    until (current=nil);
+    previous^.next := candidate;
+ end;
+
+
+
 procedure loadFromFile (var _root:PStudent; filename :string);       
 var tmp_pointer:PStudent; fileItem:FStudent;  f:TBase;
 begin 
@@ -225,11 +278,14 @@ begin
     while not EOF(f) do
     begin
         read(f,fileItem);
-        tmp_pointer := createItem (fileItem.id, fileItem.name);
-        linkItem(_root, tmp_pointer);
+        tmp_pointer := createItem (fileItem.id, fileItem.name, fileItem.year); 
+        //linkItem(_root, tmp_pointer);
+        linkItemByYearSorting(_root, tmp_pointer); //< ---------------- CHANGED
     end;
     close(f);      
 end;
+
+
 
 procedure saveToFile (var _root:PStudent; filename :string);       
 var current:Pstudent; fileItem:FStudent;  f:TBase;
@@ -250,6 +306,7 @@ begin
     begin
         fileItem.id := current^.id;
         fileItem.name := current^.name;
+        fileItem.year := current^.year;
         write(f,fileItem);
         current := current^.next;
     end
@@ -262,8 +319,8 @@ var current:Pstudent;
 begin
     clrscr();  
     writeln ('Список в опреативной памяти:');
-    writeln (' _______________________________');
-    writeln ('|   Номер  |   Фамилия И.О.     |');
+    writeln (' ________________________________________');
+    writeln ('|   Номер  |   Фамилия И.О.     | Год    |');     // < ------------------CHANGED
     if not(_root=nil) then
     begin
         current := _root;
@@ -277,7 +334,7 @@ begin
     end; 
     repeat
     begin
-        writeln ('| ',current^.id, '   ',current^.name);                   
+        writeln ('| ',current^.id, '   ',current^.name, '   ',current^.year);    // < ------------------CHANGED                 
         current := current^.next;
     end
     until (current=nil);
@@ -297,7 +354,7 @@ begin
 end;
 
 procedure addItemDialog(var _root:PStudent);
-var tmp_pointer:PStudent; _name:string; var _id:integer;
+var tmp_pointer:PStudent; _name:string; var _id, _year:integer; // <---------------------- CHANGED   
 begin
     clrscr;
     writeln('                      Добавление записи                      ');
@@ -305,13 +362,16 @@ begin
     readln(_name);
     write(' Введите номер зачетной книжки: ');
     readln(_id);  
-    tmp_pointer := createItem (_id, _name);  
-    linkItem(_root, tmp_pointer);
+    write(' Введите год рождения: ');     // <---------------------- ADDED
+    readln(_year);                        // <---------------------- ADDED
+    tmp_pointer := createItem (_id, _name, _year);  // <---------------------- CHANGED   
+   // linkItem(_root, tmp_pointer);
+    linkItemByYearSorting(_root, tmp_pointer);  // <---------------------- CHANGED   
     write(' Создана запись: ');
-    writeln ('ФИО: ', tmp_pointer^.name, ', Номер зачетной книжки: ', tmp_pointer^.id);
+    writeln ('ФИО: ', tmp_pointer^.name, ', Номер зачетной книжки: ', tmp_pointer^.id, ', Год рождения: ', tmp_pointer^.year); // <---------------------- CHANGED 
     if tmp_pointer = _root then write(' Добавлена в начало списка. '); 
     if tmp_pointer^.next = nil then write(' Добавлена в конец списка. ')
-    else write(' Добавлена перед записью ', tmp_pointer^.next^.id, '  ', tmp_pointer^.next^.name);
+    else write(' Добавлена перед записью ', tmp_pointer^.next^.id, '  ', tmp_pointer^.next^.name, ' ', tmp_pointer^.next^.year); // <---------------------- CHANGED 
     readln();  
 end;
 
@@ -369,7 +429,7 @@ begin
       end;    
 	end;
           writeln ('Найдена запись:');
-      writeln ('ФИО: ', tmp_pointer^.name, ', Номер зачетной книжки: ', tmp_pointer^.id);
+      writeln ('ФИО: ', tmp_pointer^.name, ', Номер зачетной книжки: ', tmp_pointer^.id, ', Год рождения: ', tmp_pointer^.year);  // <---------------------- CHANGED
       writeln ('Удалить запись? 1-удалить, 0-выход');
       while (true) do
       begin
